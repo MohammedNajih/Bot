@@ -5,14 +5,19 @@ from aiogram.types.web_app_info import WebAppInfo
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import callback_query
 import requests,user_agent,json,os,sys,secrets,names,urllib
-from user_agent import generate_user_agent
-import logging
 import random, datetime
 from faker import Faker 
 from time import sleep
-bot = Bot(token='5734388256:AAHFS1seyZNDE3Lxr_R28v6qCaijrN1tyw8')
+from user_agent import generate_user_agent
+import logging
+from config import *
+from flask import Flask, request 
+bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot)
+server = Flask(__name__)
+logger = aiogram.logger
+logger.setLevel(logging.DEBUG)
 
 games = InlineKeyboardButton(text="games", callback_data="games")
 yotube = InlineKeyboardButton(text="YouTube", callback_data="youtube")
@@ -38,6 +43,7 @@ keyboard1 = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 
 @dp.message_handler(content_types=["text"])
 async def process_start_command(message: types.Message):
+	global nam
 	if '/info' in message.text:
 				user = message.text.split('/info ')[1]
 				headers = {'user-agent':'Mozilla/5.0 (Linux; Android 11; SM-A205F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.40 Mobile Safari/537.36','viewport-width':'412','x-asbd-id':'198387','x-ig-app-id':'1217981644879628','x-ig-www-claim':'hmac.AR1GMxGxYNiyJ_Qr59WPgznfqJKtnAogUcpBr_5hDMSoxwjz'}
@@ -255,6 +261,7 @@ async def process_start_command(message: types.Message):
 
 @dp.callback_query_handler(text=["games", "youtube","instagram", "yahoo", "aol", "gmail", "hotmail", "user", "list", "all_domin", "followers", "following", "info","back"])
 async def random(call: types.CallbackQuery):
+	global nam
 	if call.data == "instagram":
 		await bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption="menu", reply_markup=list_insta)	  
 	if call.data == "info":
@@ -340,4 +347,14 @@ async def random(call: types.CallbackQuery):
 		await bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption='click YouTube button',reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(text='YouTube',web_app=WebAppInfo(url='https://www.youtube.com/'))))
 		#await bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption="replace ", reply_markup=ky1)
 
-executor.start_polling(dp,)
+@server.route(f"/{BOT_TOKEN}", methods=["POST"])
+def redirect_message():
+    json_string = request.get_data().decode("utf-8")
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
+
+if __name__ == "__main__":
+    bot.remove_webhook()
+    bot.set_webhook(url="https://mohammed-almuswi.onrender.com/"+str(BOT_TOKEN))
+    server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
